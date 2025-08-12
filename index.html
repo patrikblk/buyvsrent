@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kalkulačky: Hypo • Invest • Prenájom (live fix)</title>
+  <style>
+    :root{
+      --bg:#0f1220; --card:#171a2b; --muted:#aab3c5; --text:#e8ecf3;
+      --brand:#6ae3ff; --accent:#9b8cff; --danger:#ff6b6b; --ok:#59d98e;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg, #0f1220 0%, #0c1020 100%);
+      color:var(--text); line-height:1.5; padding:24px;
+    }
+    .wrap{width:100%; max-width:1200px; margin:0 auto; display:grid; gap:20px}
+    header{display:flex; align-items:center; gap:12px; justify-content:center; flex-wrap:wrap}
+    header .logo{
+      width:44px; height:44px; border-radius:12px; background:
+      radial-gradient(120% 120% at 20% 20%, var(--brand), transparent 60%),
+      radial-gradient(120% 120% at 80% 80%, var(--accent), transparent 60%),
+      var(--card);
+      box-shadow:0 10px 35px rgba(106,227,255,.15), inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+    header h1{font-size:clamp(20px,3vw,28px); margin:0}
+
+    .page{ display:grid; grid-template-columns:1.1fr .9fr; gap:20px; align-items:start; }
+    @media (max-width:960px){ .page{grid-template-columns:1fr} }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius); padding:18px; box-shadow:
+      0 6px 24px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    h2{margin:0 0 8px 0}
+    .hint{color:var(--muted); font-size:0.92rem}
+    label{display:block; font-weight:600; margin:10px 0 6px}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width:700px){ .row{grid-template-columns:1fr} }
+    input[type="number"], input[type="text"]{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.12);
+      background:#0d1122; color:var(--text); font-size:16px; outline:none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus{border-color:var(--brand); box-shadow:0 0 0 3px rgba(106,227,255,.15)}
+    .unit{display:flex; align-items:center; gap:8px}
+    .unit span{
+      min-width:46px; text-align:center; padding:10px 10px; border-radius:10px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:var(--muted)
+    }
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+    button{
+      border:none; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), var(--accent)); color:#0b0f1e;
+      box-shadow:0 10px 30px rgba(106,227,255,.25);
+    }
+    button.secondary{background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.14)}
+    .actions .secondary:not(.btn-active){ box-shadow: none; }
+    .btn-active{border-color: var(--ok)!important; box-shadow: 0 0 0 2px rgba(89,217,142,.25);}
+
+    /* RIGHT RESULTS */
+    .results{display:grid; gap:16px}
+    .kpi{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width:1200px){ .kpi{grid-template-columns:1fr} }
+    .kpi .item{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; padding:14px; min-height:86px; }
+    .kpi .label{color:var(--muted); font-size:.9rem}
+    .kpi .value{font-size:clamp(18px, 2.2vw, 26px); font-weight:800; line-height:1.2; overflow-wrap:anywhere; word-break:break-word}
+    .status{font-size:.92rem}
+    .ok{color:var(--ok)} .warn{color:var(--danger)}
+    details{margin-top:6px}
+    table{width:100%; border-collapse:collapse; margin-top:8px; font-variant-numeric: tabular-nums}
+    th, td{padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.08)}
+    th{color:var(--muted); text-align:left; font-weight:600}
+    tfoot td{font-weight:800}
+    .sidebar{position:sticky; top:16px}
+    .section-title{margin:6px 0 4px 0; font-size:clamp(16px,2.2vw,20px)}
+    hr.sep{border:none; height:1px; background:rgba(255,255,255,.08); margin:6px 0}
+    .glow-green{box-shadow:0 0 0 2px rgba(89,217,142,.25), 0 0 18px rgba(89,217,142,.25); border-color: rgba(89,217,142,.45)!important;}
+
+    .narrow{max-width:360px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Hypotéka vs prenájom</h1>
+    </header>
+
+    <div class="page">
+      <!-- LEFT: FORMS -->
+      <div class="stack">
+        <!-- Hypo -->
+        <section class="card">
+          <h2>Hypotekárna kalkulačka</h2>
+          <p class="hint">Splácanie mesačne, fixná sadzba.</p>
+
+<div class="row" style="align-items:end">
+  <div>
+    <label for="m_price">Cena nehnuteľnosti</label>
+          <div class="unit narrow">
+            <input id="m_price" type="text" inputmode="decimal" placeholder="250000" value="500000" aria-describedby="m_pHelp"/>
+            <span>€</span>
+          </div>
+          <div id="m_pHelp" class="hint">Zadaj cenu nehnuteľnosti.</div>
+  </div>
+  <div>
+    <label style="margin-top:0">Výška hypotéky</label>
+              <div class="actions" style="gap:8px; align-items:center; display:flex;">
+                <button type="button" class="secondary" id="m_ltv80">80 %</button>
+                <button type="button" class="secondary" id="m_ltv90">90 %</button>
+                <span class="hint" id="m_ltv_note" style="margin-left:8px;"></span>
+              </div>
+  </div>
+</div>
+
+
+          
+          <div class="row" style="align-items:end; margin-top:6px">
+            <div>
+              
+            </div>
+          </div>
+
+
+          <div class="row">
+            <div>
+              <label for="m_rate">Úroková sadzba (p.a.)</label>
+              <div class="unit">
+                <input id="m_rate" type="text" inputmode="decimal" placeholder="4,5" value="4,5" aria-describedby="m_rHelp"/>
+                <span>%</span>
+              </div>
+              
+            </div>
+            <div>
+              <label for="m_years">Doba splácania</label>
+              <div class="unit">
+                <input id="m_years" type="number" inputmode="numeric" min="1" step="1" placeholder="30" value="20" />
+                <span>rokov</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Rent -->
+        <section class="card">
+          <h2>Prenájom</h2>
+                    <label for="r_rent">Výška prenájmu (mesačne)</label>
+          <div class="unit narrow">
+            <input id="r_rent" type="text" inputmode="decimal" placeholder="800" value="1000" />
+            <span>€</span>
+          </div>
+
+          
+        </section>
+
+        <!-- Invest -->
+        <section class="card">
+          <h2>Investičná kalkulačka</h2>
+          <p class="hint">Vklad = splátka hypo − prenájom.</p>
+
+          <label for="i_monthly">Mesačný vklad</label>
+          <div class="unit narrow">
+            <input id="i_monthly" type="text" inputmode="decimal" placeholder="0" value="0" />
+            <span>€</span>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="i_years">Počet rokov</label>
+              <input id="i_years" type="number" inputmode="numeric" min="1" step="1" placeholder="30" value="20" />
+            </div>
+            <div>
+              <label for="i_rate">Očakávaný ročný výnos</label>
+              <div class="unit">
+                <input id="i_rate" type="text" inputmode="decimal" placeholder="10" value="10,5" />
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+        
+        <section class="card" id="verdict_card" aria-live="polite" style="margin-top:5px;">
+          <h2>Verdikt</h2>
+          <p id="verdict_text_left" style="margin-top:6px; font-weight:800;">—</p>
+        </section>
+
+      </div>
+
+      <!-- RIGHT: RESULTS -->
+      <aside class="card sidebar">
+        
+        <div class="results">
+          <h3 class="section-title">Hypotéka</h3>
+          <div class="kpi">
+            <div class="item"><div class="label">Mesačná splátka</div><div class="value" id="m_monthly_out">—</div></div>
+            <div class="item"><div class="label">Celkovo zaplatené</div><div class="value" id="m_totalPaid_out">—</div></div>
+            <div class="item"><div class="label">Zaplatené na úrokoch</div><div class="value" id="m_interest_out">—</div></div>
+          </div>
+          
+          <div class="kpi">
+  <div class="item" id="kpi_houseprice">
+    <div class="label">Cena nehnuteľnosti po splatení (<span id="m_houseprice_year">—</span>)</div>
+    <div class="value" id="m_houseprice_out">—</div>
+  </div>
+  <div class="item">
+    <div class="label">Ročné zhodnotenie nehnuteľnosti (%)</div>
+    <div class="value" style="display:flex;justify-content:space-between;"><input id="m_appreciation" type="number" value="3.5" step="0.1" min="0" style="max-width:80px"></div>
+  </div>
+</div>
+
+          <details>
+            <summary>Ročný amortizačný prehľad (hypo)</summary>
+            <div class="hint">Zostatok istiny a kumulatívne platby na konci každého roka.</div>
+            <div style="overflow:auto">
+              <table id="m_amort">
+                <thead><tr><th>Rok</th><th>Zostatok istiny</th><th>Zaplatené spolu (kumul.)</th><th>Z toho úroky (kumul.)</th></tr></thead>
+                <tbody></tbody>
+                <tfoot><tr><td>Spolu</td><td id="m_amortRemain">—</td><td id="m_amortPaid">—</td><td id="m_amortInt">—</td></tr></tfoot>
+              </table>
+            </div>
+          </details>
+
+          <hr class="sep">
+
+          <h3 class="section-title">Prenájom</h3>
+<div class="kpi">
+  <div class="item"><div class="label">Celkovo zaplatené za prenájom</div><div class="value" id="r_total">—</div></div>
+  <div class="item">
+    <div class="label">Ročné navýšenie nájmu (%)</div>
+    <div class="value" style="display:flex;justify-content:space-between;"><input id="r_increase" type="number" value="3.5" step="0.1" min="0" style="max-width:80px"></div>
+  </div>
+</div>
+          <div class="status" id="r_status" aria-live="polite"></div>
+
+          <hr class="sep">
+
+          <h3 class="section-title">Investícia</h3>
+          <div class="kpi">
+            <div class="item" id="kpi_invest_fv"><div class="label">Budúca hodnota</div><div class="value" id="i_fv">—</div></div>
+            <div class="item"><div class="label">Vložené spolu</div><div class="value" id="i_contrib">—</div></div>
+            <div class="item"><div class="label">Zisk (úroky)</div><div class="value" id="i_interest">—</div></div>
+          </div>
+          <div class="status" id="i_status" aria-live="polite"></div>
+          <div class="hint" id="i_autonote" style="display:none;color:var(--muted);font-size:0.85rem"></div>
+    
+</aside>
+    </div>
+  </div>
+
+  <script>
+    // Formatter without cents
+    const fmtEUR0 = new Intl.NumberFormat('sk-SK', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0});
+    let _LTV = 80;
+    const $ = (id) => document.getElementById(id);
+
+    function toNumber(v){
+      if (typeof v !== 'string') v = String(v ?? '');
+      v = v.replace(/\s/g, '').replace(/,/g, '.'); // spaces out, comma -> dot
+      const num = Number(v);
+      return Number.isFinite(num) ? num : NaN;
+    }
+
+    /* ============ Mortgage ============ */
+    function mortgagePayment(P, annualRate, years){
+      const n = Math.floor(years * 12);
+      const r = (annualRate/100)/12;
+      if (n <= 0 || !Number.isFinite(P) || !Number.isFinite(r)) return {payment:NaN,totalPaid:NaN,interest:NaN,n,r};
+      if (r === 0){
+        const payment = P / n;
+        return {payment, totalPaid: Math.round(payment*n), interest: Math.round(payment*n - P), n, r};
+      }
+      const factor = Math.pow(1+r, n);
+      const payment = P * (r * factor) / (factor - 1);
+      const totalPaid = payment * n;
+      const interest = totalPaid - P;
+      return {payment, totalPaid, interest, n, r};
+    }
+    function amortizationSchedule(P, r, n, payment){
+      const rows = [];
+      let balance = P;
+      let paid = 0;
+      let interestPaid = 0;
+      for(let m=1;m<=n;m++){
+        const interest = balance * r;
+        const principal = payment - interest;
+        balance = Math.max(0, balance - principal);
+        paid += payment;
+        interestPaid += interest;
+        if (m % 12 === 0){
+          rows.push({year: m/12, balance, paid, interestPaid});
+        }
+      }
+      return {rows, balance, paid, interestPaid};
+    }
+    function computeMortgage(){
+      const propPrice = toNumber($('m_price').value);
+      const price = propPrice * (_LTV/100);
+      const rate = toNumber($('m_rate').value);
+      const years = Number($('m_years').value);
+      if(!(Number.isFinite(propPrice) && propPrice>0 && Number.isFinite(rate) && rate>=0 && Number.isFinite(years) && years>0)){
+$('m_monthly_out').textContent = '—'; $('m_totalPaid_out').textContent = '—'; $('m_interest_out').textContent = '—';
+        var _tb=document.querySelector('#m_amort tbody'); if(_tb) _tb.innerHTML = '';
+        $('m_amortRemain').textContent = '—'; $('m_amortPaid').textContent = '—'; $('m_amortInt').textContent = '—';
+        return {payment: NaN, years};
+      }
+      const {payment, totalPaid, interest, n, r} = mortgagePayment(price, rate, years);
+      const payR = Math.round(payment);
+      $('m_monthly_out').textContent = fmtEUR0.format(payR);
+      $('m_totalPaid_out').textContent = fmtEUR0.format(Math.round(totalPaid));
+      $('m_interest_out').textContent = fmtEUR0.format(Math.round(interest));
+const {rows, balance, paid, interestPaid} = amortizationSchedule(price, r, n, payment);
+      const tbody = document.querySelector('#m_amort tbody'); if (tbody) tbody.innerHTML = '';
+      for(const row of rows){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.year}</td>
+          <td>${fmtEUR0.format(Math.round(row.balance))}</td>
+          <td>${fmtEUR0.format(Math.round(row.paid))}</td>
+          <td>${fmtEUR0.format(Math.round(row.interestPaid))}</td>`;
+        if(tbody) tbody.appendChild(tr);
+      }
+      $('m_amortRemain').textContent = fmtEUR0.format(Math.round(balance));
+      $('m_amortPaid').textContent = fmtEUR0.format(Math.round(paid));
+      $('m_amortInt').textContent = fmtEUR0.format(Math.round(interestPaid));
+
+      // House price calculation
+      const basePrice = propPrice;
+      const appr = parseFloat(($('m_appreciation') && $('m_appreciation').value) ? $('m_appreciation').value : 5) / 100;
+      const compounded = basePrice * Math.pow(1 + appr/12, years*12) - basePrice;
+      const totalPrice = basePrice + compounded;
+      try { $('m_houseprice_year').textContent = String(new Date().getFullYear() + years); } catch(e) {}
+      $('m_houseprice_out').textContent = fmtEUR0.format(Math.round(totalPrice));
+      window._lastHousePrice = totalPrice;
+
+      return {payment: payR, years};
+    }
+
+    /* ============ Rent ============ */
+    
+function computeRent(){
+  const rent0 = toNumber($('r_rent').value);
+  const yrs = Number(($('r_years') ? $('r_years').value : $('m_years').value));
+  const incPct = toNumber($('r_increase') ? $('r_increase').value : '3.5');
+  const inc = Number.isFinite(incPct) ? incPct/100 : 0;
+  if(!(Number.isFinite(rent0) && rent0>=0 && Number.isFinite(yrs) && yrs>0)){
+    if($('r_status')) $('r_status').innerHTML = '<span class="warn">Prenájom: skontroluj vstupy.</span>';
+    if($('r_total')) $('r_total').textContent = '—';
+    return {rent: NaN};
+  }
+  const months = Math.floor(yrs*12);
+  let total;
+  if (!Number.isFinite(inc) || inc<=0){
+    total = rent0 * months;
+  } else {
+    total = 12 * rent0 * ((Math.pow(1+inc, yrs) - 1) / inc);
+  }
+  if($('r_total')) $('r_total').textContent = fmtEUR0.format(Math.round(total));
+  if($('r_status')) $('r_status').innerHTML = `<span class="ok">Počet mesiacov ${months}. Ročné navýšenie ${Number.isFinite(incPct)?incPct.toFixed(2):'0'} %.</span>`;
+  return {rent: Math.round(rent0)};
+}
+
+    /* ============ Invest ============ */
+    function investFV(pmt, years, annualRate){
+      const n = Math.floor(years*12);
+      const i = (annualRate/100)/12;
+      if (n<=0 || !Number.isFinite(pmt) || !Number.isFinite(i)) return {fv:0,contrib:0,int:0};
+      const fv = i===0 ? pmt*n : pmt * ((Math.pow(1+i, n) - 1) / i);
+      const contrib = pmt * n;
+      return {fv, contrib, int: fv - contrib};
+    }
+    
+    // Annual compounding with constant monthly contribution (12*pmt per year at start of each year)
+    
+    
+function investFVAnnualConstant(pmt, years, annualRate){
+  const y = Math.floor(years);
+  const r = (annualRate/100);
+  if (y<=0 || !Number.isFinite(pmt) || !Number.isFinite(r)) return {fv:0,contrib:0,int:0};
+  const yearly = 12 * pmt;
+  let fv = 0, total = 0;
+  for (let i=0;i<y;i++){
+    // BEGINNING-OF-YEAR: add this year's contribution, then grow
+    total += yearly;
+    fv = (fv + yearly) * (1 + r);
+  }
+  return {fv, contrib: total, int: fv - total};
+}
+
+
+
+    function computeInvest(pmt, yrs, r){
+      if(!(Number.isFinite(pmt) && pmt>=0 && Number.isFinite(yrs) && yrs>0 && Number.isFinite(r) && r>=0)){
+        $('i_status').innerHTML = '<span class="warn">Skontroluj vstupy (podporujem aj desatinnú čiarku).</span>'; 
+        $('i_fv').textContent='—'; $('i_contrib').textContent='—'; $('i_interest').textContent='—';
+        return;
+      }
+      const {fv, contrib, int} = investFV(pmt, yrs, r);
+      $('i_fv').textContent = fmtEUR0.format(Math.round(fv));
+      $('i_contrib').textContent = fmtEUR0.format(Math.round(contrib));
+      $('i_interest').textContent = fmtEUR0.format(Math.round(int));
+      // Toggle subtle green glow based on verdict
+      (function(){
+        const hp = document.getElementById('kpi_houseprice');
+        const inv = document.getElementById('kpi_invest_fv');
+        if (!hp || !inv) return;
+        // Clear first
+        hp.classList.remove('glow-green');
+        inv.classList.remove('glow-green');
+        if (Number.isFinite(window._lastHousePrice)){
+          const diffG = window._lastHousePrice - fv;
+          if (diffG > 0){
+            // Oplatí sa kúpiť -> zvýrazni house price
+            hp.classList.add('glow-green');
+          } else {
+            // Neoplatí sa -> zvýrazni invest FV
+            inv.classList.add('glow-green');
+          }
+        }
+      })();
+
+      // Verdict calculation for left card
+      (function(){
+        const el = document.getElementById('verdict_text_left');
+        if (!el) return;
+        if (Number.isFinite(window._lastHousePrice) && Number.isFinite(fv)){
+          const diff = window._lastHousePrice - fv;
+          if (diff > 0){
+            el.textContent = `Vo vašom prípade sa nákup nehnuteľnosti oplatí :) (+${fmtEUR0.format(Math.round(diff))})`;
+            el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+          } else {
+            el.textContent = `Vo Vašom prípade ostaňte v prenájme a investujte :) (+${fmtEUR0.format(Math.round(fv - window._lastHousePrice))})`;
+            el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+          }
+        } else {
+          el.textContent = '—';
+          el.style.color = '';
+        }
+      })();
+
+      // Verdict calculation for right panel
+      (function(){
+        const el = document.getElementById('verdict_text_right');
+        if (!el) return;
+        if (Number.isFinite(window._lastHousePrice) && Number.isFinite(fv)){
+          const diff = window._lastHousePrice - fv;
+          if (diff > 0){
+            el.textContent = `Oplatí sa :) (+${fmtEUR0.format(Math.round(diff))})`;
+            el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+          } else {
+            el.textContent = `Neoplatí sa :( (${fmtEUR0.format(Math.round(diff))})`;
+            el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+          }
+        } else {
+          el.textContent = '—';
+          el.style.color = '';
+        }
+      })();
+
+      const eff = (Math.pow(1 + r/100/12, 12) - 1) * 100;
+
+      // Verdict calculation
+      if (Number.isFinite(window._lastHousePrice) && Number.isFinite(fv)) {
+        const diffVerdict = window._lastHousePrice - fv;
+        if (diffVerdict > 0) {
+          $('verdict_text').textContent = `Vo vašom prípade sa nákup nehnuteľnosti oplatí :) (+${fmtEUR0.format(Math.round(diffVerdict))})`;
+        } else {
+          $('verdict_text').textContent = `Vo vašom prípade sa nákup nehnuteľnosti neoplatí :( (${fmtEUR0.format(Math.round(diffVerdict))})`;
+        }
+      } else {
+        $('verdict_text').textContent = '—';
+      }
+
+      $('i_status').innerHTML = r === 0
+        ? '<span class="warn">Výnos 0 %: hodnota rastie len o vložené príspevky.</span>'
+        : `<span class="ok">Efektívna ročná miera približne ${eff.toFixed(2)} %.</span>`;
+    }
+
+    
+// === Dynamic investment with yearly rent increase ===
+// Computes FV with monthly compounding and monthly contributions that depend on year:
+// monthly_pmt(y) = max(0, mortgageMonthly - rent0 * (1+inc)^y) for months in year y (0-indexed)
+
+
+function computeInvestDynamic(mortMonthly, rent0, incPct, years, annualRate){
+  const y = Math.floor(years);
+  const r = (annualRate/100);
+  if (!(Number.isFinite(mortMonthly) && Number.isFinite(rent0) && Number.isFinite(incPct) && y>0 && Number.isFinite(r) && r>=0)){
+    return {fv:0, contrib:0, int:0};
+  }
+  const inc = incPct/100;
+  let fv = 0;
+  let contrib = 0;
+  for (let yr=0; yr<y; yr++){
+    const rentThisYear = rent0 * Math.pow(1+inc, yr);
+    const monthPmt = Math.max(0, mortMonthly - rentThisYear);
+    const yearly = 12 * monthPmt;
+    // BEGINNING-OF-YEAR: first add this year's contribution, then grow
+    contrib += yearly;
+    fv = (fv + yearly) * (1 + r);
+  }
+  return {fv, contrib, int: fv - contrib};
+}
+
+
+
+
+    
+// === Annual compounding investment with yearly rent increase ===
+// For year y: monthly deposit = max(0, mortMonthly - rent0*(1+inc)^y), yearly deposit S_y = 12 * monthly deposit.
+// FV uses annual compounding at 'annualRate'.
+function computeInvestAnnual(mortMonthly, rent0, incPct, years, annualRate){
+  const nYears = Math.floor(years);
+  const r = (annualRate/100);
+  if (!(Number.isFinite(mortMonthly) && Number.isFinite(rent0) && Number.isFinite(incPct) && Number.isFinite(nYears) && nYears>0 && Number.isFinite(r) && r>=0)){
+    return {fv:0, contrib:0, int:0};
+  }
+  const inc = incPct/100;
+  let fv = 0;
+  let contrib = 0;
+  for (let y=0; y<nYears; y++){
+    const rentY = rent0 * Math.pow(1+inc, y);
+    const monthlyDeposit = Math.max(0, mortMonthly - rentY);
+    const Sy = 12 * monthlyDeposit; // deposit at end of the year
+    contrib += Sy;
+    const power = (nYears - 1 - y);
+    fv += Sy * Math.pow(1 + r, power);
+  }
+  return {fv, contrib, int: fv - contrib};
+}
+
+
+    
+    // --- Apply results of annual investment model to the UI ---
+    function _applyAnnualToUI(ann, yrs, rate){
+      const fv = ann.fv, contrib = ann.contrib, intr = ann.int;
+      if (Number.isFinite(fv)){
+        document.getElementById('i_fv').textContent = fmtEUR0.format(Math.round(fv));
+        document.getElementById('i_contrib').textContent = fmtEUR0.format(Math.round(contrib));
+        document.getElementById('i_interest').textContent = fmtEUR0.format(Math.round(intr));
+        // status
+        document.getElementById('i_status').innerHTML = rate === 0
+          ? '<span class="warn">Výnos 0 %: hodnota rastie len o vložené príspevky (ročné úročenie).</span>'
+          : '<span class="ok">Úročenie: raz ročne. Prenájom sa zvyšuje ročne o zadané %.</span>';
+        // verdict + glow
+        const hp = document.getElementById('kpi_houseprice');
+        const inv = document.getElementById('kpi_invest_fv');
+        if (hp && inv){
+          hp.classList.remove('glow-green'); inv.classList.remove('glow-green');
+        }
+        const el = document.getElementById('verdict_text_left');
+        if (Number.isFinite(window._lastHousePrice)){
+          const diff = window._lastHousePrice - fv;
+          if (el){
+            if (diff > 0){
+              el.textContent = `Vo vašom prípade sa nákup nehnuteľnosti oplatí :) (+${fmtEUR0.format(Math.round(diff))})`;
+              el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+            } else {
+              el.textContent = `Vo Vašom prípade ostaňte v prenájme a investujte :) (+${fmtEUR0.format(Math.round(-diff))})`;
+              el.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+            }
+          }
+          if (hp && inv){
+            if (diff > 0){ hp.classList.add('glow-green'); } else { inv.classList.add('glow-green'); }
+          }
+        } else {
+          if (el){ el.textContent = '—'; el.style.color = ''; }
+        }
+      }
+    }
+
+    /* ============ Live recompute orchestrator ============ */
+    function recomputeAll(showAutoNote=true){
+      const m = computeMortgage();                 // 1) always recompute mortgage
+      // refresh LTV note
+      (function(){ const prop=toNumber(document.getElementById('m_price').value); const note=document.getElementById('m_ltv_note'); if(note && prop>0){ note.textContent = `Výška hypotéky: ${fmtEUR0.format(Math.round(prop*(_LTV/100)))}`; } })();
+      const r = computeRent();                     // 2) then rent
+      let autoChanged = false;
+      if (Number.isFinite(m.payment)){
+        const diff = Math.max(0, m.payment - (Number.isFinite(r.rent) ? r.rent : 0));
+        const newMonthly = String(Math.round(diff));
+        if ($('i_monthly').value !== newMonthly){ $('i_monthly').value = newMonthly; autoChanged = true; }
+        const newYears = m.years || $('i_years').value || 20;
+        if ($('i_years').value != newYears){ $('i_years').value = newYears; autoChanged = true; }
+        if (!$('i_rate').value){ $('i_rate').value = '10,5'; autoChanged = true; }
+        // Note handling
+        if (showAutoNote){
+          if (Number.isFinite(r.rent) && diff <= 0){
+            $('i_autonote').textContent = 'Pozn.: prenájom ≥ splátke, mesačný vklad nastavený na 0 €.';
+            $('i_autonote').style.display = 'block';
+          } else if (autoChanged){
+            $('i_autonote').textContent = 'Hodnoty boli automaticky predvyplnené na základe hypotéky a prenájmu.';
+            $('i_autonote').style.display = 'block';
+          } else {
+            $('i_autonote').style.display = 'none';
+          }
+        }
+      } else {
+        $('i_autonote').style.display = 'none';
+      }
+      // Finally compute investment from current fields
+      const pmt = Math.round(toNumber($('i_monthly').value));
+      const yrs = Number($('i_years').value);
+      const rate = toNumber($('i_rate').value);
+      const incPct = toNumber($('r_increase') ? $('r_increase').value : '0');
+      // Decide which investment engine to use
+      const autoDiff = (typeof m !== 'undefined' && typeof r !== 'undefined' && Number.isFinite(m.payment) && Number.isFinite(r.rent))
+        ? Math.round(Math.max(0, m.payment - r.rent))
+        : NaN;
+      if (Number.isFinite(incPct) && incPct > 0){
+        if (Number.isFinite(autoDiff) && Math.abs(pmt - autoDiff) <= 1){
+          // Auto vklad = hypo - nájom (dynamicky klesá o ročné navýšenie nájmu) + ROČNÉ pripisovanie
+          const dyn = computeInvestDynamic(m.payment, r.rent, incPct, yrs, rate);
+          $('i_fv').textContent = fmtEUR0.format(Math.round(dyn.fv));
+          $('i_contrib').textContent = fmtEUR0.format(Math.round(dyn.contrib));
+          $('i_interest').textContent = fmtEUR0.format(Math.round(dyn.int));
+          if ($('i_status')) $('i_status').innerHTML = rate === 0
+            ? '<span class="warn">Výnos 0 %: hodnota rastie len o vložené príspevky (ročné pripisovanie).</span>'
+            : '<span class="ok">Úročenie: raz ročne. Vklad klesá každý rok podľa ročného navýšenia nájmu.</span>';
+          // --- Update verdicts and highlights ---
+          (function(){
+            // Left card verdict
+            const elL = document.getElementById('verdict_text_left');
+            if (Number.isFinite(window._lastHousePrice)){
+              const diff = window._lastHousePrice - dyn.fv;
+              if (elL){
+                if (diff > 0){
+                  elL.textContent = `Vo vašom prípade sa nákup nehnuteľnosti oplatí :) (+${fmtEUR0.format(Math.round(diff))})`;
+                  elL.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+                } else {
+                  elL.textContent = `Vo Vašom prípade ostaňte v prenájme a investujte :) (+${fmtEUR0.format(Math.round(-diff))})`;
+                  elL.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+                }
+              }
+              const hp = document.getElementById('kpi_houseprice');
+              const inv = document.getElementById('kpi_invest_fv');
+              if (hp && inv){
+                hp.classList.remove('glow-green'); inv.classList.remove('glow-green');
+                if (diff > 0){ hp.classList.add('glow-green'); } else { inv.classList.add('glow-green'); }
+              }
+            } else {
+              const elL = document.getElementById('verdict_text_left');
+              if (elL){ elL.textContent = '—'; elL.style.color = ''; }
+            }
+          })();
+
+        } else {
+          // Ručný mesačný vklad, ročné pripisovanie
+          const ann = investFVAnnualConstant(pmt, yrs, rate);
+          $('i_fv').textContent = fmtEUR0.format(Math.round(ann.fv));
+          $('i_contrib').textContent = fmtEUR0.format(Math.round(ann.contrib));
+          $('i_interest').textContent = fmtEUR0.format(Math.round(ann.int));
+          if ($('i_status')) $('i_status').innerHTML = rate === 0
+            ? '<span class="warn">Výnos 0 %: hodnota rastie len o vložené príspevky (ročné pripisovanie).</span>'
+            : '<span class="ok">Úročenie: raz ročne (ročné pripisovanie). Nájom sa zvyšuje ročne, vklad je konštantný.</span>';
+          // --- Update verdicts and highlights ---
+          (function(){
+            // Left card verdict
+            const elL = document.getElementById('verdict_text_left');
+            if (Number.isFinite(window._lastHousePrice)){
+              const diff = window._lastHousePrice - ann.fv;
+              if (elL){
+                if (diff > 0){
+                  elL.textContent = `Vo vašom prípade sa nákup nehnuteľnosti oplatí :) (+${fmtEUR0.format(Math.round(diff))})`;
+                  elL.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+                } else {
+                  elL.textContent = `Vo Vašom prípade ostaňte v prenájme a investujte :) (+${fmtEUR0.format(Math.round(-diff))})`;
+                  elL.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#59d98e';
+                }
+              }
+              const hp = document.getElementById('kpi_houseprice');
+              const inv = document.getElementById('kpi_invest_fv');
+              if (hp && inv){
+                hp.classList.remove('glow-green'); inv.classList.remove('glow-green');
+                if (diff > 0){ hp.classList.add('glow-green'); } else { inv.classList.add('glow-green'); }
+              }
+            } else {
+              const elL = document.getElementById('verdict_text_left');
+              if (elL){ elL.textContent = '—'; elL.style.color = ''; }
+            }
+          })();
+
+        }
+      } else {
+        // Bez ročného navyšovania -> pôvodné mesačné úročenie
+        computeInvest(pmt, yrs, rate);
+      }
+    }
+
+    
+    // LTV buttons
+    function setLTV(val){
+      _LTV = val;
+      // toggle active UI
+      const b80 = document.getElementById('m_ltv80');
+      const b90 = document.getElementById('m_ltv90');
+      if (b80 && b90){
+        b80.classList.toggle('btn-active', _LTV===80);
+        b90.classList.toggle('btn-active', _LTV===90);
+      }
+      const prop = toNumber(document.getElementById('m_price').value);
+      if (!isNaN(prop) && prop>0){
+        const loan = prop * (_LTV/100);
+        const note = document.getElementById('m_ltv_note');
+        if (note) note.textContent = `Výška hypotéky: ${fmtEUR0.format(Math.round(loan))}`;
+      }
+      // recompute all
+      recomputeAll(true);
+    }
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const b80 = document.getElementById('m_ltv80');
+      const b90 = document.getElementById('m_ltv90');
+      if (b80){ b80.addEventListener('click', ()=>setLTV(80)); }
+      if (b90){ b90.addEventListener('click', ()=>setLTV(90)); }
+      setLTV(80); // default
+    });
+
+    // Debounced live inputs
+    function debounce(fn, wait=180){
+      let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,args), wait); };
+    }
+    const live = debounce(()=>recomputeAll(true), 220);
+
+    // Bind inputs
+    ['m_price','m_rate','m_years','r_rent','r_increase','r_years','i_monthly','i_years','i_rate','m_appreciation']
+      .forEach(id => { const el = $(id); if (el) { el.addEventListener('input', live); el.addEventListener('change', live); } });
+
+    
+// --- Ensure live init and first compute ---
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const handler = (typeof live === 'function') ? live : (() => { if (typeof recomputeAll==='function') recomputeAll(true); });
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', handler);
+      el.addEventListener('change', handler);
+    });
+    if (typeof recomputeAll === 'function') { recomputeAll(false); }
+  } catch(e){ console && console.warn && console.warn(e); }
+});
+
+// Initial compute
+window.addEventListener('load', ()=>{ try{ if (typeof recomputeAll==='function') recomputeAll(false);}catch(e){} });
+    recomputeAll(false);
+  
+// ---- Universal delegated listeners to avoid missing-ID issues ----
+(function(){
+  function _debounce(fn, wait){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), wait); }; }
+  const call = (typeof recomputeAll==='function') ? ()=>recomputeAll(true) : ()=>{};
+  const handler = (typeof live==='function') ? live : _debounce(call, 180);
+  // Capture input/change anywhere in the document
+  document.addEventListener('input', handler, true);
+  document.addEventListener('change', handler, true);
+  // First compute when DOM is ready
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{ try{ if (typeof recomputeAll==='function') recomputeAll(false); }catch(e){} });
+  } else {
+    try{ if (typeof recomputeAll==='function') recomputeAll(false); }catch(e){}
+  }
+  // Safety: compute again after full load
+  window.addEventListener('load', ()=>{ try{ if (typeof recomputeAll==='function') recomputeAll(false); }catch(e){} });
+})();
+
+</script>
+</body>
+</html>
